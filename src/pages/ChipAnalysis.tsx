@@ -304,27 +304,29 @@ export const ChipAnalysis: React.FC<ChipAnalysisProps> = ({
 
             {/* Chip Concentration Panel */}
             <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+              <div className="border-b border-gray-100 pb-3 space-y-2">
                 <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1">
                   <Layers className="w-3.5 h-3.5 text-blue-600" />
                   大戶主力籌碼集中度 (重要先行指標)
                 </h3>
-                <div id="observation-threshold-wrapper" className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg self-start sm:self-auto">
-                  <span className="text-[9px] font-bold text-slate-400 px-1">門檻:</span>
-                  {([100, 400, 1000] as const).map((t) => (
-                    <button
-                      id={`threshold-tab-${t}`}
-                      key={t}
-                      onClick={() => setThreshold(t)}
-                      className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${
-                        threshold === t
-                          ? 'bg-blue-600 text-white shadow-xs'
-                          : 'text-slate-500 hover:text-slate-900'
-                      }`}
-                    >
-                      {t}張以上
-                    </button>
-                  ))}
+                <div className="flex">
+                  <div id="observation-threshold-wrapper" className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
+                    <span className="text-[9px] font-bold text-slate-400 px-1">門檻:</span>
+                    {([100, 400, 1000] as const).map((t) => (
+                      <button
+                        id={`threshold-tab-${t}`}
+                        key={t}
+                        onClick={() => setThreshold(t)}
+                        className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${
+                          threshold === t
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'text-slate-500 hover:text-slate-900'
+                        }`}
+                      >
+                        {t}張以上
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
               
