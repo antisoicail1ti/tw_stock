@@ -1,0 +1,8 @@
+{
+  "name": "台股行動K線與籌碼分析 Dashboard",
+  "description": "提供繁體中文介面的行動優先台灣股市分析工具。包含自選股、個股即時K線、大盤分析以及法人籌碼追蹤，專為現代行動用戶設計。",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
