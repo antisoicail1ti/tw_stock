@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { MarketIndex, MarketNews, Stock } from '../types';
 import { MarketIndices } from '../components/MarketIndices';
 import { StockCard } from '../components/StockCard';
-import { Search, TrendingUp, TrendingDown, Eye, RefreshCw, Star, Newspaper, MessageSquare, Flame, Palette } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, Eye, RefreshCw, Star, Newspaper, MessageSquare, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ICON_DESIGNS } from '../App';
 
 interface HomeProps {
   stocks: Stock[];
@@ -15,8 +14,6 @@ interface HomeProps {
   onOpenSearch: () => void;
   onToggleWatchlist: (code: string) => void;
   watchlistCodes: string[];
-  selectedIconId?: string;
-  onSelectIconId?: (id: string) => void;
 }
 
 export const Home: React.FC<HomeProps> = ({
@@ -27,8 +24,6 @@ export const Home: React.FC<HomeProps> = ({
   onOpenSearch,
   onToggleWatchlist,
   watchlistCodes,
-  selectedIconId,
-  onSelectIconId,
 }) => {
   const [activeRankTab, setActiveRankTab] = useState<'gainers' | 'losers' | 'volume'>('gainers');
   const [refreshing, setRefreshing] = useState(false);
@@ -261,57 +256,6 @@ export const Home: React.FC<HomeProps> = ({
           })}
         </div>
       </div>
-
-      {/* Dynamic Favicon Switcher Panel for Mobile Screens */}
-      {selectedIconId && onSelectIconId && (
-        <div id="mobile-favicon-designer-panel" className="px-4 mt-6 mb-8">
-          <div className="flex items-center gap-1.5 mb-3">
-            <Palette className="w-4 h-4 text-red-500" />
-            <h2 className="text-sm font-bold text-slate-800 font-sans">Favicon 專屬設計切換</h2>
-          </div>
-
-          <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm space-y-3">
-            <p className="text-[11px] text-slate-500 leading-normal">
-              本站為您設計了三款獨創的<strong>台股硬幣風格</strong>圖標，點選以下即可即時更新瀏覽器標籤 (Favicon) 的圖案：
-            </p>
-
-            <div className="space-y-2">
-              {ICON_DESIGNS.map((design) => {
-                const isSelected = design.id === selectedIconId;
-                return (
-                  <button
-                    key={design.id}
-                    onClick={() => onSelectIconId(design.id)}
-                    className={`w-full text-left p-3 rounded-xl border flex items-center gap-3 transition-all ${
-                      isSelected
-                        ? 'bg-red-50 border-red-200 text-slate-900 shadow-xs'
-                        : 'bg-slate-50 border-gray-100 hover:bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    <div className="relative flex-shrink-0">
-                      <img
-                        src={design.src}
-                        alt={design.name}
-                        className="w-12 h-12 rounded-lg object-cover border border-slate-200"
-                        referrerPolicy="no-referrer"
-                      />
-                      {isSelected && (
-                        <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 text-[8px] flex items-center justify-center w-4 h-4 shadow border border-white">
-                          ✓
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold block truncate text-slate-900">{design.name}</span>
-                      <p className="text-[10px] text-slate-400 mt-1 leading-normal">{design.description}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

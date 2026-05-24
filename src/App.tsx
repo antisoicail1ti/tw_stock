@@ -11,65 +11,14 @@ import { StockDetail } from './pages/StockDetail';
 import { ChipAnalysis } from './pages/ChipAnalysis';
 import { SearchOverlay } from './components/SearchOverlay';
 import { MOCK_STOCKS, MOCK_MARKET_INDICES, MOCK_NEWS } from './data';
-import { Wifi, Battery, Signal, Sparkles, Palette, Check } from 'lucide-react';
+import { Wifi, Battery, Signal, Sparkles } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-
-export const ICON_DESIGNS = [
-  {
-    id: 'flat',
-    name: '極簡扁平 (Design A)',
-    description: '扁平現代向量，高對比、極其清晰，精緻指甲蓋 small size 最佳',
-    src: '/src/assets/images/red_flat_coin_1779617171026.png'
-  },
-  {
-    id: 'glossy',
-    name: '未來感 3D 玻璃 (Design B)',
-    description: '半透明磨砂玻璃與 3D 質感，科技金融風，立體潤澤圓滑',
-    src: '/src/assets/images/glossy_3d_coin_1779617188159.png'
-  },
-  {
-    id: 'luxury',
-    name: '尊爵奢華霧面 (Design C)',
-    description: '古典奢華紅與細緻雕刻金色圓環交織，沈穩專業、大氣質感',
-    src: '/src/assets/images/luxury_matte_coin_1779617204708.png'
-  }
-];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [selectedStockCode, setSelectedStockCode] = useState<string>('2330');
   const [searchOpen, setSearchOpen] = useState(false);
   const [watchlistCodes, setWatchlistCodes] = useState<string[]>([]);
-  const [selectedIconId, setSelectedIconId] = useState<string>(() => {
-    try {
-      return localStorage.getItem('selected_favicon_design') || 'flat';
-    } catch {
-      return 'flat';
-    }
-  });
-
-  // Dynamic Favicon and Apple Touch Icon switcher
-  useEffect(() => {
-    try {
-      localStorage.setItem('selected_favicon_design', selectedIconId);
-    } catch (e) {
-      console.warn('Failed to persist icon choice to local storage', e);
-    }
-
-    const currentIcon = ICON_DESIGNS.find((d) => d.id === selectedIconId) || ICON_DESIGNS[0];
-    
-    // Update link elements in index.html dynamically
-    const faviconLnk = document.querySelector("link[rel='icon']");
-    if (faviconLnk) {
-      (faviconLnk as HTMLLinkElement).href = currentIcon.src;
-    }
-    const appleLnk = document.querySelector("link[rel='apple-touch-icon']");
-    if (appleLnk) {
-      (appleLnk as HTMLLinkElement).href = currentIcon.src;
-    }
-  }, [selectedIconId]);
-
-  const activeIcon = ICON_DESIGNS.find((d) => d.id === selectedIconId) || ICON_DESIGNS[0];
 
   // Local storage synchronization for Watchlist
   useEffect(() => {
@@ -126,11 +75,11 @@ export default function App() {
       <div className="absolute inset-0 bg-radial-gradient from-slate-900 via-slate-950 to-black pointer-events-none z-0 opacity-40" />
       
       {/* Desktop sidebar info (Only displays in large screens) */}
-      <div className="hidden lg:flex flex-col max-w-sm text-slate-400 absolute left-12 p-6 pointer-events-auto space-y-5 z-10 select-text">
+      <div className="hidden lg:flex flex-col max-w-sm text-slate-400 absolute left-12 p-6 pointer-events-none space-y-6 z-10 select-text">
         <div id="desktop-headline" className="space-y-2">
           <div className="flex items-center gap-3 mb-2">
             <img 
-              src={activeIcon.src} 
+              src="/src/assets/images/red_flat_coin_1779617171026.png" 
               alt="台股行動 K 線與籌碼分析 Logo" 
               className="w-12 h-12 rounded-xl border border-red-500/20 shadow-md shadow-red-500/5 object-cover" 
               referrerPolicy="no-referrer"
@@ -145,51 +94,6 @@ export default function App() {
           <p className="text-xs text-slate-500 leading-relaxed font-sans font-medium">
             繁體中文介面，匯聚個股 K 線、三大法人籌碼比率、主力大戶分點與融資券觀測指標。
           </p>
-        </div>
-
-        {/* Dynamic Favicon Switcher Panel */}
-        <div className="space-y-3 pt-4 border-t border-slate-900">
-          <h3 className="text-xs font-bold text-slate-300 flex items-center gap-1.5 uppercase tracking-wide">
-            <Palette className="w-3.5 h-3.5 text-red-500" />
-            Favicon 專屬設計選擇
-          </h3>
-          <p className="text-[11px] text-slate-500 leading-normal">
-            點擊以下專業設計即可即時更換瀏覽器標籤 (Favicon) 與本站標誌：
-          </p>
-          <div className="space-y-2">
-            {ICON_DESIGNS.map((design) => {
-              const isSelected = design.id === selectedIconId;
-              return (
-                <button
-                  key={design.id}
-                  onClick={() => setSelectedIconId(design.id)}
-                  className={`w-full text-left p-2.5 rounded-xl border flex items-center gap-3 transition-all ${
-                    isSelected
-                      ? 'bg-red-500/10 border-red-500 text-white shadow-lg shadow-red-500/5'
-                      : 'bg-slate-900/40 border-slate-900 text-slate-400 hover:border-slate-800 hover:text-slate-300'
-                  }`}
-                >
-                  <div className="relative flex-shrink-0">
-                    <img
-                      src={design.src}
-                      alt={design.name}
-                      className="w-10 h-10 rounded-lg object-cover border border-slate-800"
-                      referrerPolicy="no-referrer"
-                    />
-                    {isSelected && (
-                      <div className="absolute -top-1 -right-1 bg-red-500 border border-slate-950 text-white rounded-full p-0.5 text-[8px] flex items-center justify-center w-4 h-4 shadow">
-                        ✓
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-bold block truncate leading-none">{design.name}</span>
-                    <p className="text-[10px] text-slate-500 mt-1.5 leading-relaxed">{design.description}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         <div className="space-y-3 pt-4 border-t border-slate-900">
@@ -241,8 +145,6 @@ export default function App() {
                   onOpenSearch={() => setSearchOpen(true)}
                   onToggleWatchlist={handleToggleWatchlist}
                   watchlistCodes={watchlistCodes}
-                  selectedIconId={selectedIconId}
-                  onSelectIconId={setSelectedIconId}
                 />
               </motion.div>
             )}
