@@ -1,3 +1,4 @@
+// Home Dashboard containing real-time market indices, stock leaders and live news
 import React, { useState } from 'react';
 import { MarketIndex, MarketNews, Stock } from '../types';
 import { MarketIndices } from '../components/MarketIndices';

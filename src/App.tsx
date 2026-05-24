@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+// Real-time API Integrated Taiwan Stock Dashboard App
 import React, { useState, useEffect } from 'react';
 import { TabId, BottomNav } from './components/BottomNav';
 import { Home } from './pages/Home';

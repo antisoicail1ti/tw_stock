@@ -1,3 +1,4 @@
+// Taiwan Stock Real-Time Track Engine via OpenAPI (TWSE/TPEx)
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";

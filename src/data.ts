@@ -1,3 +1,4 @@
+// Core data module integrated with real-time TWSE / TPEx OpenAPI tracking
 import { Stock, MarketIndex, MarketNews, StockChipAnalysis, KLineData, ChipConcentration } from './types';
 import twStocks from './data/twStocks.json';
 
