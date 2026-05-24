@@ -4,27 +4,32 @@ import { StockCard } from '../components/StockCard';
 import { Trash2, Plus, Star, Layers, RefreshCw, AlertCircle, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useWatchlist } from '../hooks/useWatchlist';
 
 interface WatchlistProps {
   stocks: Stock[];
-  watchlistCodes: string[];
+  watchlistCodes?: string[];
   onSelectStock: (code: string) => void;
-  onRemoveFromWatchlist: (code: string) => void;
+  onRemoveFromWatchlist?: (code: string) => void;
   onOpenSearch: () => void;
 }
 
 export const Watchlist: React.FC<WatchlistProps> = ({
   stocks,
-  watchlistCodes,
+  watchlistCodes: propWatchlistCodes,
   onSelectStock,
   onRemoveFromWatchlist,
   onOpenSearch
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('全部');
   const [isEditing, setIsEditing] = useState(false);
+  const { watchlistCodes: hookWatchlistCodes, removeStock } = useWatchlist();
+
+  const activeWatchlistCodes = propWatchlistCodes || hookWatchlistCodes;
+  const activeRemoveFromWatchlist = onRemoveFromWatchlist || removeStock;
 
   // Filter actual watchlisted stocks
-  const watchlistedStocks = stocks.filter((stock) => watchlistCodes.includes(stock.code));
+  const watchlistedStocks = stocks.filter((stock) => activeWatchlistCodes.includes(stock.code));
 
   // Get list of unique categories in watchlisted stocks
   const categories = ['全部', ...Array.from(new Set(watchlistedStocks.map((s) => s.category)))];
@@ -40,6 +45,15 @@ export const Watchlist: React.FC<WatchlistProps> = ({
   const upCount = watchlistedStocks.filter((s) => s.priceChange > 0).length;
   const downCount = watchlistedStocks.filter((s) => s.priceChange < 0).length;
   const flatCount = totalCount - upCount - downCount;
+
+  const handleFocusSearch = () => {
+    const input = document.getElementById('global-search-input');
+    if (input) {
+      input.focus();
+    } else if (onOpenSearch) {
+      onOpenSearch();
+    }
+  };
 
   return (
     <div id="watchlist-root" className="flex flex-col bg-[#F3F4F6] min-h-full pb-6">
@@ -70,7 +84,7 @@ export const Watchlist: React.FC<WatchlistProps> = ({
           <Button
             id="watchlist-add-search-btn"
             size="sm"
-            onClick={onOpenSearch}
+            onClick={handleFocusSearch}
             className="text-xs h-8 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center gap-1"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -135,6 +149,7 @@ export const Watchlist: React.FC<WatchlistProps> = ({
                   key={stock.code}
                   stock={stock}
                   onClick={onSelectStock}
+                  showFavoriteIcon={!isEditing}
                   actionIcon={
                     isEditing ? (
                       <Trash2 className="w-4 h-4 text-red-500 hover:scale-110 active:scale-95 transition-all" />
@@ -144,7 +159,7 @@ export const Watchlist: React.FC<WatchlistProps> = ({
                     isEditing
                       ? (e, code) => {
                           e.stopPropagation();
-                          onRemoveFromWatchlist(code);
+                          activeRemoveFromWatchlist(code);
                         }
                       : undefined
                   }

@@ -3,6 +3,7 @@ export interface Stock {
   name: string; // "台積電"
   code: string; // "2330"
   category: string; // "半導體" | "電子" | "金融" | "航運" | "ETF"
+  market?: string; // "TWSE" | "TPEx"
   currentPrice: number;
   openPrice: number;
   highPrice: number;

@@ -1,27 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '../types';
-import { MOCK_STOCKS } from '../data';
+import { MOCK_STOCKS, findStockByCode } from '../data';
 import { Search, X, Plus, Check, ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useWatchlist } from '../hooks/useWatchlist';
 
 interface SearchOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectStock: (code: string) => void;
-  watchlistCodes: string[];
-  onToggleWatchlist: (code: string) => void;
+  watchlistCodes?: string[];
+  onToggleWatchlist?: (code: string) => void;
 }
 
 export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   isOpen,
   onClose,
   onSelectStock,
-  watchlistCodes,
+  watchlistCodes: propWatchlistCodes,
   onToggleWatchlist
 }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Stock[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { watchlistCodes: hookWatchlistCodes, toggleStock } = useWatchlist();
+
+  const activeWatchlistCodes = propWatchlistCodes || hookWatchlistCodes;
+  const activeToggleWatchlist = onToggleWatchlist || toggleStock;
 
   useEffect(() => {
     if (isOpen) {
@@ -34,16 +40,27 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (query.trim() === '') {
+    const trimmedQuery = query.trim().toLowerCase();
+    if (trimmedQuery === '') {
       setResults(MOCK_STOCKS.slice(0, 5));
     } else {
-      const lowerQuery = query.toLowerCase();
-      const filtered = MOCK_STOCKS.filter(
+      let filtered = MOCK_STOCKS.filter(
         (stock) =>
-          stock.name.includes(lowerQuery) ||
-          stock.code.includes(lowerQuery) ||
-          stock.category.includes(lowerQuery)
+          stock.name.toLowerCase().includes(trimmedQuery) ||
+          stock.code.toLowerCase().includes(trimmedQuery) ||
+          stock.category.toLowerCase().includes(trimmedQuery)
       );
+
+      // 動態支援任意代號查詢 (4~6位純數字或字母，例如未知代碼 2331) 與動態載入、動態 K 線、動態籌碼
+      if (/^[a-zA-Z0-9]{4,6}$/.test(trimmedQuery)) {
+        const hasExactMatch = MOCK_STOCKS.some((s) => s.code === trimmedQuery);
+        if (!hasExactMatch) {
+          const dynamicStock = findStockByCode(trimmedQuery);
+          if (dynamicStock && !filtered.some((s) => s.code === trimmedQuery)) {
+            filtered = [dynamicStock, ...filtered];
+          }
+        }
+      }
       setResults(filtered);
     }
   }, [query]);
@@ -93,7 +110,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
         <div className="space-y-1">
           {results.length > 0 ? (
             results.map((stock) => {
-              const inWatchlist = watchlistCodes.includes(stock.code);
+              const inWatchlist = activeWatchlistCodes.includes(stock.code);
               const isUp = stock.priceChange >= 0;
 
               return (
@@ -135,7 +152,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                       }`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        onToggleWatchlist(stock.code);
+                        activeToggleWatchlist(stock.code);
                       }}
                       title={inWatchlist ? "從自選股移除" : "加入自選股"}
                     >

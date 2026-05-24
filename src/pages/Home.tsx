@@ -5,6 +5,7 @@ import { StockCard } from '../components/StockCard';
 import { Search, TrendingUp, TrendingDown, Eye, RefreshCw, Star, Newspaper, MessageSquare, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { useWatchlist } from '../hooks/useWatchlist';
 
 interface HomeProps {
   stocks: Stock[];
@@ -12,8 +13,9 @@ interface HomeProps {
   news: MarketNews[];
   onSelectStock: (code: string) => void;
   onOpenSearch: () => void;
-  onToggleWatchlist: (code: string) => void;
-  watchlistCodes: string[];
+  onToggleWatchlist?: (code: string) => void;
+  watchlistCodes?: string[];
+  onRefresh?: () => Promise<void> | void;
 }
 
 export const Home: React.FC<HomeProps> = ({
@@ -23,10 +25,14 @@ export const Home: React.FC<HomeProps> = ({
   onSelectStock,
   onOpenSearch,
   onToggleWatchlist,
-  watchlistCodes,
+  watchlistCodes: propWatchlistCodes,
+  onRefresh,
 }) => {
   const [activeRankTab, setActiveRankTab] = useState<'gainers' | 'losers' | 'volume'>('gainers');
   const [refreshing, setRefreshing] = useState(false);
+  const { watchlistCodes: hookWatchlistCodes } = useWatchlist();
+
+  const activeWatchlistCodes = propWatchlistCodes || hookWatchlistCodes;
 
   // Rankings calculation
   const gainers = [...stocks]
@@ -43,8 +49,15 @@ export const Home: React.FC<HomeProps> = ({
     .sort((a, b) => b.volume - a.volume)
     .slice(0, 5);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
+    if (onRefresh) {
+      try {
+        await onRefresh();
+      } catch (e) {
+        console.warn('Real-time OpenAPI refresh failed:', e);
+      }
+    }
     setTimeout(() => {
       setRefreshing(false);
     }, 600);
@@ -52,24 +65,25 @@ export const Home: React.FC<HomeProps> = ({
 
   return (
     <div id="home-page-root" className="flex flex-col bg-[#F3F4F6] min-h-full pb-4">
-      {/* Sticky top-bar search triggers */}
-      <div className="bg-white/95 backdrop-blur-md sticky top-0 px-4 py-3 border-b border-gray-200 z-30 flex items-center justify-between gap-3">
-        <div 
-          onClick={onOpenSearch}
-          className="flex-1 flex items-center gap-2.5 px-3.5 h-10 rounded-lg bg-gray-100 hover:bg-gray-200/60 transition-all cursor-pointer text-gray-400 font-medium"
-        >
-          <Search className="w-4 h-4 text-gray-400 group-hover:scale-110 transition-transform" />
-          <span className="text-xs text-gray-500">搜尋股票、代號或資訊...</span>
+      {/* 盤中即時狀態與重整按鈕 */}
+      <div className="bg-white px-4 py-3 border-b border-gray-100 flex items-center justify-between sticky top-0 z-20">
+        <div>
+          <h2 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            即時加權大盤指數
+          </h2>
+          <p className="text-[10px] text-slate-450 mt-0.5 font-medium font-mono">盤中自動連線更新</p>
         </div>
         
         <Button
           id="refresh-feed-btn"
-          size="icon"
-          variant="ghost"
-          className={`h-10 w-10 text-gray-500 hover:text-blue-600 bg-gray-100 border-none rounded-lg ${refreshing ? 'animate-spin' : ''}`}
+          size="sm"
+          variant="outline"
+          className={`h-8 px-3 text-xs text-slate-500 hover:text-blue-600 border-gray-200 rounded-lg flex items-center gap-1.5 bg-slate-50 ${refreshing ? 'animate-spin' : ''}`}
           onClick={handleRefresh}
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className="w-3.5 h-3.5" />
+          重整
         </Button>
       </div>
 
@@ -129,61 +143,40 @@ export const Home: React.FC<HomeProps> = ({
           <CardContent className="p-3 space-y-2">
             {activeRankTab === 'gainers' && (
               <div className="space-y-2 animate-fade-in">
-                {gainers.map((stock) => {
-                  const inWatchlist = watchlistCodes.includes(stock.code);
-                  return (
-                    <StockCard
-                      key={stock.code}
-                      stock={stock}
-                      onClick={onSelectStock}
-                      actionIcon={<Star className={`w-4 h-4 ${inWatchlist ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300'}`} />}
-                      onActionClick={(e) => {
-                        e.stopPropagation();
-                        onToggleWatchlist(stock.code);
-                      }}
-                    />
-                  );
-                })}
+                {gainers.map((stock) => (
+                  <StockCard
+                    key={stock.code}
+                    stock={stock}
+                    onClick={onSelectStock}
+                    showFavoriteIcon={true}
+                  />
+                ))}
               </div>
             )}
 
             {activeRankTab === 'losers' && (
               <div className="space-y-2 animate-fade-in">
-                {losers.map((stock) => {
-                  const inWatchlist = watchlistCodes.includes(stock.code);
-                  return (
-                    <StockCard
-                      key={stock.code}
-                      stock={stock}
-                      onClick={onSelectStock}
-                      actionIcon={<Star className={`w-4 h-4 ${inWatchlist ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300'}`} />}
-                      onActionClick={(e) => {
-                        e.stopPropagation();
-                        onToggleWatchlist(stock.code);
-                      }}
-                    />
-                  );
-                })}
+                {losers.map((stock) => (
+                  <StockCard
+                    key={stock.code}
+                    stock={stock}
+                    onClick={onSelectStock}
+                    showFavoriteIcon={true}
+                  />
+                ))}
               </div>
             )}
 
             {activeRankTab === 'volume' && (
               <div className="space-y-2 animate-fade-in">
-                {topVolume.map((stock) => {
-                  const inWatchlist = watchlistCodes.includes(stock.code);
-                  return (
-                    <StockCard
-                      key={stock.code}
-                      stock={stock}
-                      onClick={onSelectStock}
-                      actionIcon={<Star className={`w-4 h-4 ${inWatchlist ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300'}`} />}
-                      onActionClick={(e) => {
-                        e.stopPropagation();
-                        onToggleWatchlist(stock.code);
-                      }}
-                    />
-                  );
-                })}
+                {topVolume.map((stock) => (
+                  <StockCard
+                    key={stock.code}
+                    stock={stock}
+                    onClick={onSelectStock}
+                    showFavoriteIcon={true}
+                  />
+                ))}
               </div>
             )}
           </CardContent>

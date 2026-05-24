@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
+import { useWatchlist } from '../hooks/useWatchlist';
+
 // Custom tooltip renderer for Recharts
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -56,14 +58,14 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 interface StockDetailProps {
   stock: Stock;
-  watchlistCodes: string[];
-  onToggleWatchlist: (code: string) => void;
+  watchlistCodes?: string[];
+  onToggleWatchlist?: (code: string) => void;
   onNavigateToTab: (tab: 'home' | 'watchlist' | 'detail' | 'chip') => void;
 }
 
 export const StockDetail: React.FC<StockDetailProps> = ({
   stock,
-  watchlistCodes,
+  watchlistCodes: propWatchlistCodes,
   onToggleWatchlist,
   onNavigateToTab
 }) => {
@@ -71,6 +73,11 @@ export const StockDetail: React.FC<StockDetailProps> = ({
   const [showMA5, setShowMA5] = useState(true);
   const [showMA10, setShowMA10] = useState(false);
   const [showMA20, setShowMA20] = useState(true);
+  
+  const { watchlistCodes: hookWatchlistCodes, toggleStock } = useWatchlist();
+
+  const activeWatchlistCodes = propWatchlistCodes || hookWatchlistCodes;
+  const activeToggleWatchlist = onToggleWatchlist || toggleStock;
 
   // Load K-line data
   const originalKLine = useMemo(() => generateMockKLine(stock), [stock]);
@@ -84,7 +91,7 @@ export const StockDetail: React.FC<StockDetailProps> = ({
 
   const chipData = useMemo(() => getOrGenerateChipAnalysis(stock.code), [stock.code]);
 
-  const isWatchlisted = watchlistCodes.includes(stock.code);
+  const isWatchlisted = activeWatchlistCodes.includes(stock.code);
   const isUp = stock.priceChange > 0;
   const isDown = stock.priceChange < 0;
 
@@ -117,7 +124,7 @@ export const StockDetail: React.FC<StockDetailProps> = ({
           id="toggle-detail-watchlist"
           variant="outline"
           size="sm"
-          onClick={() => onToggleWatchlist(stock.code)}
+          onClick={() => activeToggleWatchlist(stock.code)}
           className={`text-xs h-8 px-2.5 rounded-lg border-gray-200 text-slate-500 flex items-center gap-1 ${
             isWatchlisted ? 'bg-blue-50 text-blue-600 hover:text-blue-700 border-blue-100 font-semibold' : 'hover:bg-slate-50'
           }`}

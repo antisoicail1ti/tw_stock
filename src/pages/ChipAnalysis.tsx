@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Stock, StockChipAnalysis } from '../types';
-import { MOCK_STOCKS, getOrGenerateChipAnalysis } from '../data';
+import { findStockByCode, MOCK_STOCKS, getOrGenerateChipAnalysis } from '../data';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
   ResponsiveContainer, AreaChart, Area, ReferenceLine
@@ -57,7 +57,7 @@ export const ChipAnalysis: React.FC<ChipAnalysisProps> = ({
 
   // Load active stock info
   const activeStock = useMemo(() => {
-    return MOCK_STOCKS.find(s => s.code === stockCode) || MOCK_STOCKS[0];
+    return findStockByCode(stockCode);
   }, [stockCode]);
 
   // Load active stock's chips

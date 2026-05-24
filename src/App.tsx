@@ -10,64 +10,60 @@ import { Watchlist } from './pages/Watchlist';
 import { StockDetail } from './pages/StockDetail';
 import { ChipAnalysis } from './pages/ChipAnalysis';
 import { SearchOverlay } from './components/SearchOverlay';
-import { MOCK_STOCKS, MOCK_MARKET_INDICES, MOCK_NEWS } from './data';
+import { SearchBar } from './components/SearchBar';
+import { findStockByCode, MOCK_STOCKS, MOCK_MARKET_INDICES, MOCK_NEWS, updateStocksWithLiveData } from './data';
 import { Wifi, Battery, Signal, Sparkles } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useWatchlist } from './hooks/useWatchlist';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [selectedStockCode, setSelectedStockCode] = useState<string>('2330');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [watchlistCodes, setWatchlistCodes] = useState<string[]>([]);
+  const { watchlistCodes, toggleStock, removeStock } = useWatchlist();
 
-  // Local storage synchronization for Watchlist
+  const [lastFetch, setLastFetch] = useState<Date | null>(null);
+  const [stocksUpdated, setStocksUpdated] = useState(0);
+  const [currentTime, setCurrentTime] = useState('09:30');
+
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('tw_stocks_watchlist');
-      if (stored) {
-        setWatchlistCodes(JSON.parse(stored));
-      } else {
-        // Default seed symbols representing core Taiwan chip stocks
-        const defaultWatch = ['2330', '2317', '0050', '00878'];
-        setWatchlistCodes(defaultWatch);
-        localStorage.setItem('tw_stocks_watchlist', JSON.stringify(defaultWatch));
-      }
-    } catch (e) {
-      console.warn("Local storage retrieval failed, using fallback empty state", e);
-    }
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(now.toTimeString().slice(0, 5));
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 60000);
+    return () => clearInterval(timer);
   }, []);
 
-  const handleToggleWatchlist = (code: string) => {
-    let nextWatchlist: string[];
-    if (watchlistCodes.includes(code)) {
-      nextWatchlist = watchlistCodes.filter((c) => c !== code);
-    } else {
-      nextWatchlist = [...watchlistCodes, code];
-    }
-    setWatchlistCodes(nextWatchlist);
+  const fetchLivePrices = async () => {
     try {
-      localStorage.setItem('tw_stocks_watchlist', JSON.stringify(nextWatchlist));
+      const response = await fetch('/api/stocks');
+      const json = await response.json();
+      if (json.success && json.data) {
+        updateStocksWithLiveData(json.data);
+        setLastFetch(new Date(json.lastUpdated || Date.now()));
+        setStocksUpdated((prev) => prev + 1);
+      }
     } catch (e) {
-      console.warn("Local storage write failed", e);
+      console.warn('Could not load live stocks from Backend OpenAPI', e);
     }
   };
 
-  const handleRemoveFromWatchlist = (code: string) => {
-    const nextWatchlist = watchlistCodes.filter((c) => c !== code);
-    setWatchlistCodes(nextWatchlist);
-    try {
-      localStorage.setItem('tw_stocks_watchlist', JSON.stringify(nextWatchlist));
-    } catch (e) {
-      console.warn("Local storage write failed", e);
-    }
-  };
+  useEffect(() => {
+    fetchLivePrices();
+
+    // Fetch update from backend OpenAPI proxy every 15 minutes
+    const interval = setInterval(fetchLivePrices, 15 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSelectStock = (code: string) => {
     setSelectedStockCode(code);
     setActiveTab('detail'); // Instantly focus detail page
   };
 
-  const activeStock = MOCK_STOCKS.find((s) => s.code === selectedStockCode) || MOCK_STOCKS[0];
+  const activeStock = findStockByCode(selectedStockCode);
 
   return (
     <div id="app-viewport-wrapper" className="min-h-screen bg-slate-950 flex items-center justify-center font-sans tracking-tight select-none">
@@ -117,13 +113,22 @@ export default function App() {
       >
         {/* Simulated iOS status topbar (Only shows on desktop heights) */}
         <div id="device-status-topbar" className="hidden lg:flex items-center justify-between px-6 pt-3 pb-1 bg-white text-slate-900 border-b border-slate-50 text-[11px] font-bold font-mono">
-          <span>09:30</span> {/* Opening Stock Hour! */}
+          <span>{currentTime}</span>
           <div className="flex items-center gap-1.5">
-            <Signal className="w-3.5 h-3.5 text-slate-850" />
-            <Wifi className="w-3.5 h-3.5 text-slate-850" />
-            <Battery className="w-4 h-4 text-slate-850" />
+            {lastFetch && (
+              <span className="text-[9px] font-bold text-red-500 flex items-center gap-1 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-200 mr-1 animate-pulse">
+                <span className="w-1 h-1 rounded-full bg-red-500" />
+                TWSE OpenAPI
+              </span>
+            )}
+            <Signal className="w-3.5 h-3.5 text-slate-800" />
+            <Wifi className="w-3.5 h-3.5 text-slate-800" />
+            <Battery className="w-4 h-4 text-slate-800" />
           </div>
         </div>
+
+        {/* 全局粘性搜尋欄 */}
+        <SearchBar onSelectStock={handleSelectStock} />
 
         {/* Dynamic page container */}
         <div id="dynamic-pages-container" className="flex-1 overflow-y-auto relative bg-[#F3F4F6]">
@@ -143,8 +148,9 @@ export default function App() {
                   news={MOCK_NEWS}
                   onSelectStock={handleSelectStock}
                   onOpenSearch={() => setSearchOpen(true)}
-                  onToggleWatchlist={handleToggleWatchlist}
+                  onToggleWatchlist={toggleStock}
                   watchlistCodes={watchlistCodes}
+                  onRefresh={fetchLivePrices}
                 />
               </motion.div>
             )}
@@ -162,7 +168,7 @@ export default function App() {
                   stocks={MOCK_STOCKS}
                   watchlistCodes={watchlistCodes}
                   onSelectStock={handleSelectStock}
-                  onRemoveFromWatchlist={handleRemoveFromWatchlist}
+                  onRemoveFromWatchlist={removeStock}
                   onOpenSearch={() => setSearchOpen(true)}
                 />
               </motion.div>
@@ -180,7 +186,7 @@ export default function App() {
                 <StockDetail
                   stock={activeStock}
                   watchlistCodes={watchlistCodes}
-                  onToggleWatchlist={handleToggleWatchlist}
+                  onToggleWatchlist={toggleStock}
                   onNavigateToTab={(tab) => setActiveTab(tab)}
                 />
               </motion.div>
@@ -209,7 +215,7 @@ export default function App() {
             onClose={() => setSearchOpen(false)}
             onSelectStock={handleSelectStock}
             watchlistCodes={watchlistCodes}
-            onToggleWatchlist={handleToggleWatchlist}
+            onToggleWatchlist={toggleStock}
           />
         </div>
 

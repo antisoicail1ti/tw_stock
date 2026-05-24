@@ -1,11 +1,13 @@
 import React from 'react';
 import { Stock } from '../types';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUpRight, ArrowDownRight, Volume2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Volume2, Star } from 'lucide-react';
+import { useWatchlist } from '../hooks/useWatchlist';
 
 interface StockCardProps {
   stock: Stock;
   onClick: (code: string) => void;
+  showFavoriteIcon?: boolean;
   actionIcon?: React.ReactNode;
   onActionClick?: (e: React.MouseEvent, code: string) => void;
 }
@@ -13,9 +15,12 @@ interface StockCardProps {
 export const StockCard: React.FC<StockCardProps> = ({
   stock,
   onClick,
+  showFavoriteIcon = false,
   actionIcon,
   onActionClick
 }) => {
+  const { watchlistCodes, toggleStock } = useWatchlist();
+  const isFavorite = watchlistCodes.includes(stock.code);
   const isUp = stock.priceChange > 0;
   const isDown = stock.priceChange < 0;
   
@@ -86,16 +91,39 @@ export const StockCard: React.FC<StockCardProps> = ({
           </div>
         </div>
 
-        {actionIcon && onActionClick && (
-          <button
-            id={`stock-card-action-${stock.code}`}
-            className="p-1 px-1.5 ml-1 rounded-full text-slate-300 hover:text-red-500 hover:bg-slate-50 transition-colors"
-            onClick={(e) => {
-              onActionClick(e, stock.code);
-            }}
-          >
-            {actionIcon}
-          </button>
+        {/* Action button: Custom or default Favorite Star Toggle */}
+        {actionIcon || onActionClick ? (
+          actionIcon && onActionClick && (
+            <button
+              id={`stock-card-action-${stock.code}`}
+              className="p-1 px-1.5 ml-1 rounded-full text-slate-300 hover:text-red-500 hover:bg-slate-50 transition-colors"
+              onClick={(e) => {
+                onActionClick(e, stock.code);
+              }}
+            >
+              {actionIcon}
+            </button>
+          )
+        ) : (
+          showFavoriteIcon && (
+            <button
+              id={`stock-card-star-${stock.code}`}
+              className="p-1 px-1.5 ml-1 rounded-full transition-colors flex items-center justify-center hover:bg-slate-100"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleStock(stock.code);
+              }}
+              title={isFavorite ? '從自選股移除' : '加入自選股'}
+            >
+              <Star
+                className={`w-4 shadow-2xs h-4 transition-all duration-200 active:scale-130 ${
+                  isFavorite
+                    ? 'fill-amber-400 text-amber-500'
+                    : 'text-slate-300 hover:text-slate-400'
+                }`}
+              />
+            </button>
+          )
         )}
       </div>
     </div>

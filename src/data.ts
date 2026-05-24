@@ -1,4 +1,5 @@
 import { Stock, MarketIndex, MarketNews, StockChipAnalysis, KLineData, ChipConcentration } from './types';
+import twStocks from './data/twStocks.json';
 
 // 大盤指數
 export const MOCK_MARKET_INDICES: MarketIndex[] = [
@@ -22,13 +23,171 @@ export const MOCK_MARKET_INDICES: MarketIndex[] = [
   }
 ];
 
-// 台股清單
-export const MOCK_STOCKS: Stock[] = [
-  {
+// 台股清單 - 匯入自 /src/data/twStocks.json，完全連通
+export const MOCK_STOCKS: Stock[] = (twStocks as any[]).map((item) => ({
+  id: item.code,
+  ...item
+}));
+
+// 提供一個全鏈路即時資料庫
+let globalLiveData: Record<string, any> = {};
+
+export const updateStocksWithLiveData = (liveData: Record<string, any>) => {
+  globalLiveData = liveData;
+  
+  for (const item of MOCK_STOCKS) {
+    const live = liveData[item.code];
+    if (live) {
+      if (live.currentPrice !== null) item.currentPrice = live.currentPrice;
+      if (live.openPrice !== null) item.openPrice = live.openPrice;
+      if (live.highPrice !== null) item.highPrice = live.highPrice;
+      if (live.lowPrice !== null) item.lowPrice = live.lowPrice;
+      if (live.yesterdayClose !== null) item.yesterdayClose = live.yesterdayClose;
+      if (live.priceChange !== null) item.priceChange = live.priceChange;
+      if (live.priceChangePercent !== null) item.priceChangePercent = live.priceChangePercent;
+      if (live.volume !== null) item.volume = live.volume;
+      if (live.turnover !== null) item.turnover = live.turnover;
+      if (live.peRatio !== null) item.peRatio = live.peRatio;
+      if (live.pbRatio !== null) item.pbRatio = live.pbRatio;
+      if (live.dividendYield !== null) item.dividendYield = live.dividendYield;
+    }
+  }
+
+  // 同步更新動態生成股
+  for (const code of Object.keys(liveData)) {
+    const live = liveData[code];
+    if (!live) continue;
+    
+    if (dynamicStocksCache[code]) {
+      const item = dynamicStocksCache[code];
+      if (live.currentPrice !== null) item.currentPrice = live.currentPrice;
+      if (live.openPrice !== null) item.openPrice = live.openPrice;
+      if (live.highPrice !== null) item.highPrice = live.highPrice;
+      if (live.lowPrice !== null) item.lowPrice = live.lowPrice;
+      if (live.yesterdayClose !== null) item.yesterdayClose = live.yesterdayClose;
+      if (live.priceChange !== null) item.priceChange = live.priceChange;
+      if (live.priceChangePercent !== null) item.priceChangePercent = live.priceChangePercent;
+      if (live.volume !== null) item.volume = live.volume;
+      if (live.turnover !== null) item.turnover = live.turnover;
+      if (live.peRatio !== null) item.peRatio = live.peRatio;
+      if (live.pbRatio !== null) item.pbRatio = live.pbRatio;
+      if (live.dividendYield !== null) item.dividendYield = live.dividendYield;
+    }
+  }
+};
+
+// 根據代號動態生成一個全新的 Stock 對象，支援所有未列出的上市、上櫃股票或 ETF
+export const generateDynamicStock = (code: string): Stock => {
+  const isEtf = code.startsWith('00') || code.length >= 5;
+  const category = isEtf ? 'ETF' : (code.startsWith('28') ? '金融' : (code.startsWith('26') ? '航運' : '電子'));
+  const market = isEtf ? 'TWSE' : (code.startsWith('6') || code.startsWith('8') ? 'TPEx' : 'TWSE');
+  
+  // 先查看是否有真正後端返回的即時 OpenAPI 數據
+  const live = globalLiveData[code];
+  if (live) {
+    return {
+      id: code,
+      code,
+      name: live.name || `動態個股 ${code}`,
+      category,
+      market,
+      currentPrice: live.currentPrice || 0,
+      openPrice: live.openPrice || 0,
+      highPrice: live.highPrice || 0,
+      lowPrice: live.lowPrice || 0,
+      yesterdayClose: live.yesterdayClose || 0,
+      priceChange: live.priceChange || 0,
+      priceChangePercent: live.priceChangePercent || 0,
+      volume: live.volume || 0,
+      turnover: live.turnover || 0,
+      peRatio: live.peRatio || 0,
+      pbRatio: live.pbRatio || 0,
+      dividendYield: live.dividendYield || 0
+    };
+  }
+
+  // 依據代號區間生成寫實的基準股價
+  const basePrice = code.startsWith('30') || code.startsWith('36') || code.startsWith('65') ? 600 + Math.random() * 900 :
+                    (code.startsWith('23') || code.startsWith('24') ? 80 + Math.random() * 320 : 15 + Math.random() * 65);
+  
+  const yesterdayClose = parseFloat(basePrice.toFixed(2));
+  const priceChangePercent = parseFloat(((Math.random() - 0.46) * 6).toFixed(2)); // 微幅往上偏
+  const priceChange = parseFloat((yesterdayClose * (priceChangePercent / 100)).toFixed(2));
+  const currentPrice = parseFloat((yesterdayClose + priceChange).toFixed(2));
+  
+  const openPrice = parseFloat((yesterdayClose * (1 + (Math.random() - 0.5) * 0.02)).toFixed(2));
+  const highPrice = parseFloat((Math.max(currentPrice, openPrice) * (1 + Math.random() * 0.015)).toFixed(2));
+  const lowPrice = parseFloat((Math.min(currentPrice, openPrice) * (1 - Math.random() * 0.015)).toFixed(2));
+  
+  const volume = Math.floor(800 + Math.random() * 45000);
+  const turnover = parseFloat(((currentPrice * volume) / 100000).toFixed(1)); // 億元
+  
+  const peRatio = isEtf ? 0 : parseFloat((8 + Math.random() * 22).toFixed(1));
+  const pbRatio = isEtf ? 0 : parseFloat((0.8 + Math.random() * 4.5).toFixed(2));
+  const dividendYield = parseFloat((1.5 + Math.random() * 8).toFixed(2));
+
+  // 動態推敲一個具備台灣風味的名稱（例如：代號+特選/潛力股/科技/成長）
+  let name = `動態證券 ${code}`;
+  if (isEtf) {
+    name = code.endsWith('8') || code.endsWith('9') ? `動態永續高息ETF ${code}` : `動態台灣50 ${code}`;
+  } else if (code.startsWith('30') || code.startsWith('36') || code.startsWith('65')) {
+    name = code.endsWith('1') || code.endsWith('5') ? `${code} 先進矽智` : `${code} 科技半導`;
+  } else if (code.startsWith('23') || code.startsWith('24')) {
+    name = code.endsWith('0') || code.endsWith('3') ? `${code} 系統整合` : `${code} 原生半導`;
+  } else if (code.startsWith('28')) {
+    name = `${code} 金控集團`;
+  } else if (code.startsWith('26')) {
+    name = `${code} 海空航運`;
+  }
+
+  return {
+    id: code,
+    code,
+    name,
+    category,
+    market,
+    currentPrice,
+    openPrice,
+    highPrice,
+    lowPrice,
+    yesterdayClose,
+    priceChange,
+    priceChangePercent,
+    volume,
+    turnover,
+    peRatio,
+    pbRatio,
+    dividendYield
+  };
+};
+
+// 用於快取動態生成的個股
+const dynamicStocksCache: Record<string, Stock> = {};
+
+export const findStockByCode = (code: string): Stock => {
+  const codeStr = String(code).trim();
+  const staticStock = MOCK_STOCKS.find((s) => s.code === codeStr);
+  if (staticStock) return staticStock;
+
+  if (dynamicStocksCache[codeStr]) {
+    return dynamicStocksCache[codeStr];
+  }
+
+  // 僅針對看起來像股票代號的代碼（長度 4~6 位字元）進行動態生成
+  if (/^[a-zA-Z0-9]{4,6}$/.test(codeStr)) {
+    const freshStock = generateDynamicStock(codeStr);
+    dynamicStocksCache[codeStr] = freshStock;
+    // 註冊到 MOCK_STOCKS 大名冊，完全串聯所有列表與篩選
+    MOCK_STOCKS.push(freshStock);
+    return freshStock;
+  }
+
+  return MOCK_STOCKS[0] || {
     id: "2330",
-    name: "台積電",
     code: "2330",
+    name: "台積電",
     category: "半導體",
+    market: "TWSE",
     currentPrice: 875.0,
     openPrice: 865.0,
     highPrice: 880.0,
@@ -36,175 +195,13 @@ export const MOCK_STOCKS: Stock[] = [
     yesterdayClose: 860.0,
     priceChange: 15.0,
     priceChangePercent: 1.74,
-    volume: 24531, // 張
-    turnover: 214.2, // 億
+    volume: 24531,
+    turnover: 214.2,
     peRatio: 26.5,
     pbRatio: 5.4,
     dividendYield: 1.82
-  },
-  {
-    id: "2317",
-    name: "鴻海",
-    code: "2317",
-    category: "電子",
-    currentPrice: 178.5,
-    openPrice: 176.0,
-    highPrice: 179.5,
-    lowPrice: 174.5,
-    yesterdayClose: 175.0,
-    priceChange: 3.5,
-    priceChangePercent: 2.0,
-    volume: 48950,
-    turnover: 86.8,
-    peRatio: 16.2,
-    pbRatio: 1.8,
-    dividendYield: 3.03
-  },
-  {
-    id: "2454",
-    name: "聯發科",
-    code: "2454",
-    category: "半導體",
-    currentPrice: 1195.0,
-    openPrice: 1210.0,
-    highPrice: 1215.0,
-    lowPrice: 1180.0,
-    yesterdayClose: 1205.0,
-    priceChange: -10.0,
-    priceChangePercent: -0.83,
-    volume: 3820,
-    turnover: 45.6,
-    peRatio: 22.8,
-    pbRatio: 3.9,
-    dividendYield: 4.6
-  },
-  {
-    id: "2382",
-    name: "廣達",
-    code: "2382",
-    category: "電子",
-    currentPrice: 285.5,
-    openPrice: 280.0,
-    highPrice: 290.0,
-    lowPrice: 279.0,
-    yesterdayClose: 278.0,
-    priceChange: 7.5,
-    priceChangePercent: 2.7,
-    volume: 18725,
-    turnover: 53.4,
-    peRatio: 24.1,
-    pbRatio: 4.2,
-    dividendYield: 3.15
-  },
-  {
-    id: "2603",
-    name: "長榮",
-    code: "2603",
-    category: "航運",
-    currentPrice: 202.0,
-    openPrice: 205.0,
-    highPrice: 206.5,
-    lowPrice: 199.5,
-    yesterdayClose: 204.5,
-    priceChange: -2.5,
-    priceChangePercent: -1.22,
-    volume: 14500,
-    turnover: 29.3,
-    peRatio: 8.5,
-    pbRatio: 1.2,
-    dividendYield: 9.9
-  },
-  {
-    id: "2881",
-    name: "富邦金",
-    code: "2881",
-    category: "金融",
-    currentPrice: 74.2,
-    openPrice: 73.8,
-    highPrice: 74.5,
-    lowPrice: 73.5,
-    yesterdayClose: 73.6,
-    priceChange: 0.6,
-    priceChangePercent: 0.82,
-    volume: 12530,
-    turnover: 9.3,
-    peRatio: 11.4,
-    pbRatio: 1.1,
-    dividendYield: 4.04
-  },
-  {
-    id: "2882",
-    name: "國泰金",
-    code: "2882",
-    category: "金融",
-    currentPrice: 53.9,
-    openPrice: 54.2,
-    highPrice: 54.4,
-    lowPrice: 53.6,
-    yesterdayClose: 54.3,
-    priceChange: -0.4,
-    priceChangePercent: -0.74,
-    volume: 15400,
-    turnover: 8.3,
-    peRatio: 12.1,
-    pbRatio: 0.95,
-    dividendYield: 3.71
-  },
-  {
-    id: "0050",
-    name: "元大台灣50",
-    code: "0050",
-    category: "ETF",
-    currentPrice: 165.4,
-    openPrice: 164.2,
-    highPrice: 165.9,
-    lowPrice: 163.9,
-    yesterdayClose: 163.8,
-    priceChange: 1.6,
-    priceChangePercent: 0.98,
-    volume: 9850,
-    turnover: 16.3,
-    peRatio: 0.0, // ETF 無本益比
-    pbRatio: 0.0,
-    dividendYield: 3.45
-  },
-  {
-    id: "00878",
-    name: "國泰永續高股息",
-    code: "00878",
-    category: "ETF",
-    currentPrice: 22.85,
-    openPrice: 22.80,
-    highPrice: 22.92,
-    lowPrice: 22.78,
-    yesterdayClose: 22.82,
-    priceChange: 0.03,
-    priceChangePercent: 0.13,
-    volume: 38240,
-    turnover: 8.7,
-    peRatio: 0.0,
-    pbRatio: 0.0,
-    dividendYield: 6.85
-  },
-  {
-    id: "00919",
-    name: "群益台灣精選高息",
-    code: "00919",
-    category: "ETF",
-    currentPrice: 25.12,
-    openPrice: 25.20,
-    highPrice: 25.30,
-    lowPrice: 25.05,
-    yesterdayClose: 25.25,
-    priceChange: -0.13,
-    priceChangePercent: -0.51,
-    volume: 45890,
-    turnover: 11.5,
-    peRatio: 0.0,
-    pbRatio: 0.0,
-    dividendYield: 9.88
-  }
-];
+  };
+};
 
 // 生成 K 線歷史數據 (最近30日)
 export const generateMockKLine = (stock: Stock): KLineData[] => {
