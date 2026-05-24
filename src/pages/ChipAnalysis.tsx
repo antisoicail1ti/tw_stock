@@ -449,7 +449,7 @@ export const ChipAnalysis: React.FC<ChipAnalysisProps> = ({
         {chipTab === 'branches' && (
           <div className="space-y-4 animate-fade-in">
             {/* Broker Branch Net Volumes Rank Tables */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-4">
               {/* Top Buyers */}
               <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
                 <h3 className="text-xs font-bold text-red-600 flex items-center gap-1 border-b border-gray-100 pb-2 mb-2">
